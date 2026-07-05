@@ -1,0 +1,1274 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>main.cpp — CGPA Calculator Defense</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#ffffff;
+  --panel:#F4F7F9;
+  --panel-line:#E2E9ED;
+  --ink:#101820;
+  --ink-soft:#56626C;
+  --ink-faint:#8A949C;
+  --accent:#0E7C86;
+  --accent-deep:#0A5B62;
+  --accent-soft:#E4F3F3;
+  --warn:#C2622D;
+  --warn-soft:#FBE9DE;
+  --good:#1E8E5A;
+  --good-soft:#E3F5EC;
+  --code-bg:#101B22;
+  --code-bg-2:#0C151B;
+  --code-ink:#D9E4E8;
+  --code-kw:#7FD8C6;
+  --code-str:#F2C572;
+  --code-ty:#8FB8E8;
+  --code-cm:#5C6E77;
+  --code-num:#E29B7D;
+  --font-body:'Inter',system-ui,sans-serif;
+  --font-mono:'JetBrains Mono',monospace;
+  --radius:14px;
+  --dur:220ms;
+}
+@media (prefers-reduced-motion: reduce){
+  *{transition-duration:0.01ms !important; animation-duration:0.01ms !important;}
+}
+*{box-sizing:border-box;}
+html,body{margin:0;padding:0;}
+body{
+  background:var(--bg);
+  color:var(--ink);
+  font-family:var(--font-body);
+  overflow:hidden;
+  height:100vh;
+  display:flex;
+  flex-direction:column;
+}
+
+/* ---------- Top chrome ---------- */
+.topbar{
+  display:flex;
+  align-items:center;
+  gap:14px;
+  padding:12px 22px;
+  border-bottom:1px solid var(--panel-line);
+  flex-shrink:0;
+  background:var(--bg);
+}
+.tab{
+  display:flex;
+  align-items:center;
+  gap:9px;
+  background:var(--panel);
+  border:1px solid var(--panel-line);
+  border-radius:9px;
+  padding:6px 14px;
+  font-family:var(--font-mono);
+  font-size:13px;
+  color:var(--ink-soft);
+}
+.tab .dots{display:flex;gap:5px;}
+.tab .dots span{width:7px;height:7px;border-radius:50%;background:#D7DEE2;display:inline-block;}
+.tab .dots span:nth-child(1){background:#E0857B;}
+.tab .dots span:nth-child(2){background:#E8C97B;}
+.tab .dots span:nth-child(3){background:#8FCB9C;}
+.tab .filename{color:var(--ink);font-weight:600;}
+.breadcrumb{
+  font-family:var(--font-mono);
+  font-size:13px;
+  color:var(--accent-deep);
+  white-space:nowrap;
+  overflow:hidden;
+  text-overflow:ellipsis;
+}
+.breadcrumb b{color:var(--accent);}
+.topbar-spacer{flex:1;}
+.counter{
+  font-family:var(--font-mono);
+  font-size:13px;
+  color:var(--ink-faint);
+  white-space:nowrap;
+}
+
+/* progress rail */
+.progress-rail{
+  height:3px;
+  background:var(--panel-line);
+  flex-shrink:0;
+  position:relative;
+}
+.progress-fill{
+  position:absolute;
+  top:0;left:0;height:100%;
+  background:var(--accent);
+  transition:width var(--dur) ease;
+}
+
+/* ---------- Stage ---------- */
+.stage{
+  flex:1;
+  position:relative;
+  overflow:hidden;
+}
+.slide{
+  position:absolute;
+  inset:0;
+  padding:40px 64px 30px;
+  display:flex;
+  flex-direction:column;
+  opacity:0;
+  transform:translateY(10px);
+  pointer-events:none;
+  transition:opacity var(--dur) ease, transform var(--dur) ease;
+  overflow-y:auto;
+}
+.slide.active{
+  opacity:1;
+  transform:translateY(0);
+  pointer-events:auto;
+}
+.slide-head{margin-bottom:22px;flex-shrink:0;}
+.eyebrow{
+  font-family:var(--font-mono);
+  font-size:12.5px;
+  letter-spacing:0.06em;
+  color:var(--accent);
+  font-weight:600;
+  text-transform:uppercase;
+}
+.slide-head h2{
+  font-family:var(--font-mono);
+  font-size:30px;
+  margin:6px 0 0;
+  font-weight:700;
+  color:var(--ink);
+}
+.slide-head p.sub{
+  margin:8px 0 0;
+  color:var(--ink-soft);
+  font-size:15px;
+  max-width:760px;
+}
+
+.slide-body{
+  display:grid;
+  grid-template-columns:1.05fr 0.95fr;
+  gap:28px;
+  flex:1;
+  min-height:0;
+}
+.slide-body.single{grid-template-columns:1fr;}
+
+/* ---------- Code panel ---------- */
+.code-panel{
+  background:var(--code-bg);
+  border-radius:var(--radius);
+  overflow:hidden;
+  display:flex;
+  flex-direction:column;
+  min-height:0;
+  box-shadow:0 10px 30px -12px rgba(16,24,32,0.35);
+}
+.code-panel-bar{
+  display:flex;
+  align-items:center;
+  gap:8px;
+  padding:10px 16px;
+  background:var(--code-bg-2);
+  border-bottom:1px solid #1C2A32;
+  flex-shrink:0;
+}
+.code-panel-bar span.d{width:9px;height:9px;border-radius:50%;}
+.code-panel-bar .d1{background:#E0857B;}
+.code-panel-bar .d2{background:#E8C97B;}
+.code-panel-bar .d3{background:#8FCB9C;}
+.code-panel-bar .fname{
+  font-family:var(--font-mono);font-size:12.5px;color:#8FA0A8;margin-left:4px;
+}
+.code-scroll{overflow:auto;padding:18px 20px;flex:1;min-height:0;}
+pre.code{
+  margin:0;
+  font-family:var(--font-mono);
+  font-size:14px;
+  line-height:1.65;
+  color:var(--code-ink);
+  white-space:pre-wrap;
+  word-break:break-word;
+}
+.kw{color:var(--code-kw);}
+.ty{color:var(--code-ty);}
+.st{color:var(--code-str);}
+.cm{color:var(--code-cm);font-style:italic;}
+.nm{color:var(--code-num);}
+
+/* clickable annotation tokens */
+.annot{position:relative;display:inline;}
+.tok{
+  cursor:pointer;
+  border-bottom:1.5px dotted var(--accent);
+  padding:0 1px;
+  border-radius:3px;
+  transition:background var(--dur) ease;
+}
+.tok:hover{background:rgba(14,124,134,0.18);}
+.annot.open .tok{background:rgba(14,124,134,0.32);}
+.note{
+  display:none;
+  font-family:var(--font-body);
+  font-size:13px;
+  line-height:1.5;
+  color:var(--code-bg);
+  background:#EAF6F5;
+  border-left:3px solid var(--accent);
+  padding:10px 12px;
+  border-radius:0 8px 8px 8px;
+  margin:6px 0 10px;
+  white-space:normal;
+}
+.annot.open .note{display:block;}
+
+/* ---------- Explain panel ---------- */
+.explain-panel{
+  overflow-y:auto;
+  min-height:0;
+  padding-right:6px;
+}
+.explain-panel ul{margin:0;padding-left:0;list-style:none;}
+.explain-panel li{
+  position:relative;
+  padding:12px 0 12px 26px;
+  border-bottom:1px solid var(--panel-line);
+  font-size:15px;
+  line-height:1.55;
+  color:var(--ink);
+}
+.explain-panel li:last-child{border-bottom:none;}
+.explain-panel li::before{
+  content:"";
+  position:absolute;left:0;top:19px;
+  width:8px;height:8px;
+  border-radius:50%;
+  background:var(--accent-soft);
+  border:2px solid var(--accent);
+}
+.explain-panel li b{color:var(--accent-deep);}
+.explain-panel code{
+  font-family:var(--font-mono);
+  background:var(--panel);
+  padding:1px 6px;
+  border-radius:5px;
+  font-size:0.92em;
+  color:var(--accent-deep);
+}
+.callout{
+  background:var(--warn-soft);
+  border-left:3px solid var(--warn);
+  border-radius:0 10px 10px 10px;
+  padding:12px 14px;
+  font-size:14px;
+  color:#7A3C15;
+  margin-top:14px;
+}
+.callout.good{background:var(--good-soft);border-left-color:var(--good);color:#155C39;}
+
+/* ---------- Nav bar ---------- */
+.navbar{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  padding:14px 22px;
+  border-top:1px solid var(--panel-line);
+  flex-shrink:0;
+}
+.navbtn{
+  font-family:var(--font-mono);
+  font-size:13px;
+  font-weight:600;
+  border:1px solid var(--panel-line);
+  background:var(--bg);
+  color:var(--ink);
+  padding:9px 18px;
+  border-radius:9px;
+  cursor:pointer;
+  display:flex;
+  align-items:center;
+  gap:8px;
+  transition:background var(--dur) ease, border-color var(--dur) ease;
+}
+.navbtn:hover{border-color:var(--accent);color:var(--accent-deep);}
+.navbtn:disabled{opacity:0.35;cursor:default;}
+.navbtn:focus-visible{outline:2px solid var(--accent);outline-offset:2px;}
+.navhint{font-family:var(--font-mono);font-size:12px;color:var(--ink-faint);}
+
+/* ---------- Title slide ---------- */
+.title-wrap{display:flex;flex-direction:column;align-items:flex-start;justify-content:center;height:100%;max-width:900px;}
+.title-wrap .kicker{font-family:var(--font-mono);color:var(--accent);font-size:13px;letter-spacing:0.08em;text-transform:uppercase;font-weight:600;}
+.title-wrap h1{font-family:var(--font-mono);font-size:46px;margin:12px 0 14px;font-weight:700;line-height:1.15;}
+.title-wrap h1 span{color:var(--accent);}
+.title-wrap p{font-size:16.5px;color:var(--ink-soft);max-width:640px;line-height:1.6;}
+.chip-flow{display:flex;flex-wrap:wrap;gap:10px;margin-top:26px;}
+.chip{
+  font-family:var(--font-mono);
+  font-size:12.5px;
+  background:var(--panel);
+  border:1px solid var(--panel-line);
+  border-radius:999px;
+  padding:7px 14px;
+  color:var(--ink-soft);
+}
+.chip b{color:var(--accent-deep);}
+.chip-arrow{color:var(--ink-faint);align-self:center;font-size:14px;}
+
+/* ---------- Interactive widgets ---------- */
+.widget{
+  background:var(--panel);
+  border:1px solid var(--panel-line);
+  border-radius:var(--radius);
+  padding:22px;
+  display:flex;
+  flex-direction:column;
+  gap:16px;
+  min-height:0;
+  overflow:auto;
+}
+.widget-row{display:flex;gap:12px;flex-wrap:wrap;align-items:center;}
+.radio-group{display:flex;gap:8px;}
+.radio-group label{
+  font-family:var(--font-mono);
+  font-size:13px;
+  padding:8px 14px;
+  border-radius:8px;
+  border:1px solid var(--panel-line);
+  background:var(--bg);
+  cursor:pointer;
+  color:var(--ink-soft);
+}
+.radio-group input{display:none;}
+.radio-group input:checked + span{color:var(--accent-deep);}
+.radio-group label:has(input:checked){border-color:var(--accent);background:var(--accent-soft);}
+.id-input{
+  flex:1;min-width:220px;
+  font-family:var(--font-mono);
+  font-size:16px;
+  padding:11px 14px;
+  border:1.5px solid var(--panel-line);
+  border-radius:9px;
+  outline:none;
+  background:var(--bg);
+}
+.id-input:focus{border-color:var(--accent);}
+.result-box{
+  border-radius:10px;
+  padding:14px 16px;
+  font-family:var(--font-mono);
+  font-size:14px;
+  line-height:1.6;
+  border:1.5px solid var(--panel-line);
+  background:var(--bg);
+  min-height:64px;
+}
+.result-box.pass{border-color:var(--good);background:var(--good-soft);color:#155C39;}
+.result-box.fail{border-color:var(--warn);background:var(--warn-soft);color:#7A3C15;}
+.result-box.neutral{color:var(--ink-faint);}
+
+.slider-row{display:flex;align-items:center;gap:16px;}
+input[type=range]{
+  flex:1;
+  accent-color:var(--accent);
+  height:6px;
+}
+.score-readout{
+  font-family:var(--font-mono);
+  font-size:34px;
+  font-weight:700;
+  color:var(--accent-deep);
+  min-width:80px;
+  text-align:right;
+}
+.grade-bands{display:flex;gap:4px;flex-wrap:wrap;}
+.band{
+  flex:1;
+  min-width:56px;
+  text-align:center;
+  padding:9px 4px;
+  border-radius:8px;
+  font-family:var(--font-mono);
+  font-size:12px;
+  background:var(--bg);
+  border:1.5px solid var(--panel-line);
+  color:var(--ink-faint);
+  transition:all var(--dur) ease;
+}
+.band.active{
+  background:var(--accent);
+  border-color:var(--accent);
+  color:#fff;
+  transform:translateY(-3px);
+}
+.band small{display:block;opacity:0.8;font-size:10px;margin-top:2px;}
+
+/* ---------- Quiz ---------- */
+.quiz-grid{
+  display:grid;
+  grid-template-columns:repeat(auto-fill,minmax(230px,1fr));
+  gap:16px;
+}
+.flip-card{
+  perspective:1200px;
+  height:150px;
+  cursor:pointer;
+}
+.flip-inner{
+  position:relative;
+  width:100%;height:100%;
+  transition:transform 0.5s;
+  transform-style:preserve-3d;
+}
+.flip-card.flipped .flip-inner{transform:rotateY(180deg);}
+.flip-front,.flip-back{
+  position:absolute;inset:0;
+  backface-visibility:hidden;
+  border-radius:12px;
+  padding:16px;
+  display:flex;
+  align-items:center;
+  font-size:13.5px;
+  line-height:1.4;
+  border:1.5px solid var(--panel-line);
+}
+.flip-front{background:var(--panel);color:var(--ink);}
+.flip-front::before{content:"Q";font-family:var(--font-mono);color:var(--accent);font-weight:700;margin-right:8px;font-size:16px;}
+.flip-back{background:var(--accent-deep);color:#fff;transform:rotateY(180deg);}
+.flip-back::before{content:"A";font-family:var(--font-mono);font-weight:700;margin-right:8px;font-size:16px;opacity:0.7;}
+
+/* closing slide */
+.closing{display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;text-align:center;}
+.closing h2{font-family:var(--font-mono);font-size:38px;}
+.closing p{color:var(--ink-soft);font-size:16px;max-width:520px;}
+
+/* scrollbars */
+.code-scroll::-webkit-scrollbar,.explain-panel::-webkit-scrollbar,.widget::-webkit-scrollbar{width:8px;}
+.code-scroll::-webkit-scrollbar-thumb{background:#26363F;border-radius:8px;}
+.explain-panel::-webkit-scrollbar-thumb,.widget::-webkit-scrollbar-thumb{background:var(--panel-line);border-radius:8px;}
+
+@media (max-width:900px){
+  .slide{padding:26px 22px 20px;}
+  .slide-body{grid-template-columns:1fr;grid-auto-rows:min-content;overflow-y:auto;}
+  .slide-head h2{font-size:24px;}
+  .breadcrumb{display:none;}
+  .title-wrap h1{font-size:32px;}
+}
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <div class="tab"><span class="dots"><span></span><span></span><span></span></span><span class="filename">main.cpp</span></div>
+  <div class="breadcrumb" id="breadcrumb">main.cpp <b>&gt; overview</b></div>
+  <div class="topbar-spacer"></div>
+  <div class="counter" id="counter">01 / 25</div>
+</div>
+<div class="progress-rail"><div class="progress-fill" id="progressFill" style="width:0%"></div></div>
+
+<div class="stage" id="stage">
+
+<!-- 0: TITLE -->
+<section class="slide active" data-fn="overview">
+  <div class="title-wrap">
+    <span class="kicker">CGPA Calculator — Code Defense</span>
+    <h1>A level-100 program that turns <span>raw scores</span> into a real GPA.</h1>
+    <p>10 small functions, each with one job, orchestrated by <code style="font-family:var(--font-mono);background:var(--panel);padding:2px 8px;border-radius:6px;">main()</code>. Built for students at UG (Legon) and GCTU, using each university's official grading scale.</p>
+    <div class="chip-flow">
+      <span class="chip"><b>selectUniversity</b></span><span class="chip-arrow">→</span>
+      <span class="chip"><b>inputName</b></span><span class="chip-arrow">→</span>
+      <span class="chip"><b>inputStudentID</b></span><span class="chip-arrow">→</span>
+      <span class="chip"><b>getCourseList</b></span><span class="chip-arrow">→</span>
+      <span class="chip"><b>selectCourses</b></span><span class="chip-arrow">→</span>
+      <span class="chip"><b>assignGrades</b></span><span class="chip-arrow">→</span>
+      <span class="chip"><b>calculateCGPA</b></span><span class="chip-arrow">→</span>
+      <span class="chip"><b>displaySummary</b></span>
+    </div>
+  </div>
+</section>
+
+<!-- 1: HEADERS -->
+<section class="slide" data-fn="#include">
+  <div class="slide-head"><span class="eyebrow">Concept 01</span><h2>Why each header is there</h2></div>
+  <div class="slide-body">
+    <div class="code-panel"><div class="code-panel-bar"><span class="d d1"></span><span class="d d2"></span><span class="d d3"></span><span class="fname">main.cpp</span></div>
+    <div class="code-scroll"><pre class="code"><span class="cm">// A simple C++17 program that calculates the cgpa...</span>
+<span class="kw">#include</span> <span class="annot"><span class="tok st">&lt;iostream&gt;</span><span class="note">Gives access to <code>cin</code> and <code>cout</code> — without it the program can't read input or print anything at all.</span></span>
+<span class="kw">#include</span> <span class="annot"><span class="tok st">&lt;vector&gt;</span><span class="note">Gives access to <code>vector</code>, used for course lists and selections since the number of courses is only known once the program is running.</span></span>
+<span class="kw">#include</span> <span class="annot"><span class="tok st">&lt;string&gt;</span><span class="note">Gives access to the <code>string</code> type — used for names, IDs, course codes, and letter grades.</span></span>
+<span class="kw">#include</span> <span class="annot"><span class="tok st">&lt;iomanip&gt;</span><span class="note">Gives access to <code>fixed</code> and <code>setprecision()</code> — without it the final GPA could print as 3.41999999 instead of 3.42.</span></span>
+<span class="kw">#include</span> <span class="annot"><span class="tok st">&lt;cctype&gt;</span><span class="note">Gives access to <code>isdigit()</code>, used character-by-character while validating student ID formats.</span></span>
+<span class="kw">using namespace</span> std;</pre></div></div>
+    <div class="explain-panel"><ul>
+      <li>Click any highlighted header above to see exactly what it unlocks.</li>
+      <li>Each header exists because something specific in the program needs it — remove one and a specific feature breaks, not the whole file randomly.</li>
+      <li><b>Rule of thumb:</b> only include what you actually use. This file doesn't need <code>&lt;cmath&gt;</code> or <code>&lt;algorithm&gt;</code> because nothing here does trigonometry or sorting.</li>
+      <li><code>using namespace std;</code> lets us write <code>cout</code> instead of <code>std::cout</code> — fine for a program this size, though larger codebases often avoid it.</li>
+    </ul></div>
+  </div>
+</section>
+
+<!-- 2: STRUCT -->
+<section class="slide" data-fn="struct Course">
+  <div class="slide-head"><span class="eyebrow">Concept 02</span><h2>The <code style="font-family:var(--font-mono);background:var(--panel);padding:2px 8px;border-radius:6px;">Course</code> struct</h2></div>
+  <div class="slide-body">
+    <div class="code-panel"><div class="code-panel-bar"><span class="d d1"></span><span class="d d2"></span><span class="d d3"></span><span class="fname">main.cpp</span></div>
+    <div class="code-scroll"><pre class="code"><span class="kw">struct</span> <span class="ty">Course</span>
+{
+    <span class="annot"><span class="tok ty">string</span><span class="note">A struct can hold fields of different types together — here a string, an int, another string, and a double, all under one name.</span></span> code;
+    string name;
+    <span class="annot"><span class="tok ty">int</span><span class="note">Credit hours are always whole numbers, so <code>int</code> fits — this is the multiplier used in the GPA formula.</span></span> creditHours;
+    string letterGrade;
+    double gradePoint;
+};
+
+<span class="cm">// later, accessed like this:</span>
+<span class="annot"><span class="tok">selectedCourses[i].creditHours</span><span class="note">The dot operator reaches into one specific Course object and pulls out just its creditHours field.</span></span> * selectedCourses[i].gradePoint;</pre></div></div>
+    <div class="explain-panel"><ul>
+      <li>A <b>struct</b> bundles related data into one custom type — instead of five separate arrays (codes[], names[], hours[]...) that could accidentally fall out of sync, one <code>Course</code> keeps everything about a single course glued together.</li>
+      <li>Every course the student selects becomes one <code>Course</code> object, carrying its own code, name, credit hours, and — once graded — its own letter grade and grade point.</li>
+      <li>The dot operator (<code>.</code>) is how you reach inside: <code>course.name</code>, <code>course.gradePoint</code>, etc.</li>
+      <li><b>Why not fill in letterGrade/gradePoint at creation?</b> Because they aren't known yet — the course exists before the student enters a score. The struct is built incrementally as the program learns more.</li>
+    </ul></div>
+  </div>
+</section>
+
+<!-- 3: PROTOTYPES -->
+<section class="slide" data-fn="prototypes">
+  <div class="slide-head"><span class="eyebrow">Concept 03</span><h2>Function prototypes</h2></div>
+  <div class="slide-body">
+    <div class="code-panel"><div class="code-panel-bar"><span class="d d1"></span><span class="d d2"></span><span class="d d3"></span><span class="fname">main.cpp</span></div>
+    <div class="code-scroll"><pre class="code"><span class="cm">// function prototypes</span>
+<span class="kw">int</span> selectUniversity();
+<span class="kw">string</span> inputName();
+string inputStudentID(<span class="kw">int</span> uniChoice);
+<span class="annot"><span class="tok kw">bool</span><span class="note">This is a signature: return type + name + parameter types, ending in a semicolon — no body. It's a promise, not an implementation.</span></span> validateStudentID(int uniChoice, string id);
+vector&lt;Course&gt; getCourseList(int uniChoice);
+<span class="cm">// ...and so on for every function</span>
+
+int main()
+{
+    <span class="annot"><span class="tok">int uniChoice = selectUniversity();</span><span class="note">main() calls selectUniversity() before it's fully defined further down the file. This only compiles because the prototype above already told the compiler what selectUniversity looks like.</span></span>
+}</pre></div></div>
+    <div class="explain-panel"><ul>
+      <li>A <b>prototype</b> is a function's signature without its body — it tells the compiler "this function exists and looks like this," so code above the real definition can still call it safely.</li>
+      <li>Without prototypes, functions can only call other functions that are already <i>fully defined above them</i> in the file — which would force an awkward, fragile ordering.</li>
+      <li>With prototypes declared once at the top, <code>main()</code> can sit right after them and read cleanly, while the real definitions live below in whatever order makes sense to a reader.</li>
+      <li>Only the <b>types</b> in a prototype have to match the real definition exactly — parameter names are just for readability and can even differ.</li>
+    </ul></div>
+  </div>
+</section>
+
+<!-- 4: VALIDATION LOOP PATTERN -->
+<section class="slide" data-fn="assignGrades() — pattern">
+  <div class="slide-head"><span class="eyebrow">Concept 04</span><h2>The "ask → check → re-ask" pattern</h2></div>
+  <div class="slide-body">
+    <div class="code-panel"><div class="code-panel-bar"><span class="d d1"></span><span class="d d2"></span><span class="d d3"></span><span class="fname">main.cpp</span></div>
+    <div class="code-scroll"><pre class="code">string inputStudentID(int uniChoice)
+{
+    string id;
+    <span class="annot"><span class="tok kw">bool</span><span class="note">A plain flag that starts false and only flips to true once the input passes the check. This is the switch the loop watches.</span></span> valid = <span class="kw">false</span>;
+
+    <span class="annot"><span class="tok kw">while</span><span class="note">The loop body runs at least once, and keeps repeating for as long as valid stays false — meaning it will not let the program move on until it gets acceptable input.</span></span> (!valid)
+    {
+        cout &lt;&lt; <span class="st">"Enter your student ID: "</span>;
+        cin &gt;&gt; id;
+
+        valid = validateStudentID(uniChoice, id);
+
+        <span class="kw">if</span> (!valid)
+            cout &lt;&lt; <span class="st">"Invalid student ID format...\n"</span>;
+    }
+    <span class="kw">return</span> id;
+}</pre></div></div>
+    <div class="explain-panel"><ul>
+      <li>This exact shape — a boolean flag, a <code>while (!valid)</code> loop, ask, check, re-ask — repeats across <b>four</b> different functions: <code>selectUniversity</code>, <code>inputStudentID</code>, <code>selectCourses</code>, and <code>assignGrades</code>.</li>
+      <li>It's the simplest reliable way in beginner C++ to guarantee "don't proceed until the input is actually usable," without exceptions or more advanced error handling.</li>
+      <li>The flag is deliberately named for what it <i>means</i> (<code>valid</code>), not how it's used — that's what makes <code>while (!valid)</code> read almost like English.</li>
+      <li>Notice the checking logic itself (<code>validateStudentID</code>) is a separate function — the loop's job is only to keep asking, not to know <i>how</i> to judge the answer.</li>
+    </ul></div>
+  </div>
+</section>
+
+<!-- 5: STRING OPS -->
+<section class="slide" data-fn="validateStudentID()">
+  <div class="slide-head"><span class="eyebrow">Concept 05</span><h2>String operations behind ID validation</h2></div>
+  <div class="slide-body">
+    <div class="code-panel"><div class="code-panel-bar"><span class="d d1"></span><span class="d d2"></span><span class="d d3"></span><span class="fname">main.cpp</span></div>
+    <div class="code-scroll"><pre class="code">bool validateStudentID(int uniChoice, string id)
+{
+    if (uniChoice == 1)
+    {
+        <span class="kw">if</span> (<span class="annot"><span class="tok">id.length() != 10</span><span class="note">Checked FIRST, before anything else. If the string is too short, we bail out here — before any risky indexing happens below.</span></span>)
+            return false;
+        if (<span class="annot"><span class="tok">id.substr(0, 6)</span><span class="note">substr(start, count) grabs a slice of the string: 6 characters beginning at index 0 — exactly the "UG2026" prefix.</span></span> != "UG2026")
+            return false;
+
+        for (int i = 6; i &lt; 10; ++i)
+        {
+            if (!<span class="annot"><span class="tok">isdigit(id[i])</span><span class="note">isdigit() only accepts ONE character (a char), not a whole string — that's why this runs inside a loop, checking id[i] one position at a time.</span></span>)
+                return false;
+        }
+        return true;
+    }
+    <span class="cm">// GCTU branch follows the same shape...</span>
+}</pre></div></div>
+    <div class="explain-panel"><ul>
+      <li><code>.length()</code>, <code>.substr(start, count)</code>, and <code>isdigit()</code> are the three string tools doing all the work here.</li>
+      <li><b>Order matters:</b> length is checked before any indexing or substr call — a string shorter than expected could otherwise cause an out-of-bounds access, which is undefined behavior in C++ (unlike some languages, it won't necessarily throw a clean error).</li>
+      <li><code>isdigit()</code> comes from <code>&lt;cctype&gt;</code> and works on single characters — this is exactly why the digit-check needs a <code>for</code> loop instead of one call on the whole string.</li>
+      <li>Two nearly-identical branches (UG vs GCTU) exist because each university's invented ID format has a different prefix and length rule.</li>
+    </ul></div>
+  </div>
+</section>
+
+<!-- 6: ID SIMULATOR -->
+<section class="slide" data-fn="validateStudentID() — live">
+  <div class="slide-head"><span class="eyebrow">Live demo</span><h2>Try the ID validator yourself</h2>
+  <p class="sub">This mirrors <code>validateStudentID()</code> exactly — same rules, running live in the browser.</p></div>
+  <div class="slide-body single">
+    <div class="widget">
+      <div class="widget-row">
+        <div class="radio-group">
+          <label><input type="radio" name="uni" value="1" checked><span>UG (Legon) — 10 chars, "UG2026" + 4 digits</span></label>
+          <label><input type="radio" name="uni" value="2"><span>GCTU — 10 digits, starts "252640"</span></label>
+        </div>
+      </div>
+      <div class="widget-row">
+        <input type="text" class="id-input" id="idInput" placeholder="Type a student ID, e.g. UG20264567" maxlength="14">
+      </div>
+      <div class="result-box neutral" id="idResult">Start typing to see it validated live, the same way the C++ function would.</div>
+    </div>
+  </div>
+</section>
+
+<!-- 7: CIN VS GETLINE -->
+<section class="slide" data-fn="inputName()">
+  <div class="slide-head"><span class="eyebrow">Concept 06</span><h2><code style="font-family:var(--font-mono);background:var(--panel);padding:2px 8px;border-radius:6px;">cin &gt;&gt;</code> vs <code style="font-family:var(--font-mono);background:var(--panel);padding:2px 8px;border-radius:6px;">getline</code></h2></div>
+  <div class="slide-body">
+    <div class="code-panel"><div class="code-panel-bar"><span class="d d1"></span><span class="d d2"></span><span class="d d3"></span><span class="fname">main.cpp</span></div>
+    <div class="code-scroll"><pre class="code">int selectUniversity()
+{
+    int choice;
+    cin &gt;&gt; choice;   <span class="cm">// leaves a newline behind in the buffer</span>
+    return choice;
+}
+
+string inputName()
+{
+    string name;
+    cout &lt;&lt; <span class="st">"Enter your name: "</span>;
+    <span class="annot"><span class="tok">cin.ignore();</span><span class="note">Clears that leftover newline character sitting in the input buffer from the previous cin >> choice. Without this line, getline would immediately read an empty leftover line instead of waiting for real input.</span></span>
+    <span class="annot"><span class="tok">getline(cin, name);</span><span class="note">Unlike cin >>, getline reads an entire line — including spaces — which is essential for a full name like "Kwame Asante".</span></span>
+    return name;
+}</pre></div></div>
+    <div class="explain-panel"><ul>
+      <li><code>cin &gt;&gt;</code> stops reading at the first whitespace — fine for a single word, a number, or an ID with no spaces, but it would chop "Kwame Asante" down to just "Kwame".</li>
+      <li><code>getline(cin, name)</code> reads the whole line, spaces included — that's why the name field uses it instead.</li>
+      <li>The catch: <code>cin &gt;&gt;</code> leaves the newline character (from hitting Enter) still sitting in the input buffer. If <code>getline</code> runs right after, it reads that leftover empty newline instead of waiting for the user.</li>
+      <li><code>cin.ignore()</code> discards exactly that leftover character, so the next <code>getline</code> starts clean.</li>
+    </ul></div>
+  </div>
+</section>
+
+<!-- 8: VECTORS VS ARRAYS -->
+<section class="slide" data-fn="selectCourses()">
+  <div class="slide-head"><span class="eyebrow">Concept 07</span><h2>Why <code style="font-family:var(--font-mono);background:var(--panel);padding:2px 8px;border-radius:6px;">vector&lt;Course&gt;</code>, not a plain array</h2></div>
+  <div class="slide-body">
+    <div class="code-panel"><div class="code-panel-bar"><span class="d d1"></span><span class="d d2"></span><span class="d d3"></span><span class="fname">main.cpp</span></div>
+    <div class="code-scroll"><pre class="code">vector&lt;Course&gt; selectCourses(vector&lt;Course&gt; allCourses)
+{
+    <span class="annot"><span class="tok ty">vector&lt;Course&gt;</span><span class="note">A vector is a resizable list. Unlike a fixed array (e.g. Course courses[5]), it can grow to hold exactly as many courses as the student actually selects — which isn't known until the program is running.</span></span> selected;
+
+    <span class="cm">// ... display menu ...</span>
+
+    for (int i = 0; i &lt; numCourses; i++)
+    {
+        <span class="cm">// ...validated courseChoice...</span>
+        <span class="annot"><span class="tok">selected.push_back(allCourses[courseChoice - 1]);</span><span class="note">push_back adds one more element onto the end of the vector, growing it by one each time — there's no equivalent for a fixed-size array without manually managing capacity.</span></span>
+    }
+    return selected;
+}</pre></div></div>
+    <div class="explain-panel"><ul>
+      <li>A plain C-style array needs its size fixed at compile time (or manually tracked) — but nobody knows how many courses a student will pick until they type it in.</li>
+      <li><code>vector&lt;Course&gt;</code> handles that automatically: it starts empty and grows one course at a time via <code>.push_back()</code>.</li>
+      <li><code>.size()</code> always reports the current number of elements — used everywhere for loop bounds and validation ranges (e.g. "choose between 1 and allCourses.size()").</li>
+      <li>Vectors are used for every list in this program: the full course catalog, the student's selections, and the graded results — the same container type flows through the whole pipeline.</li>
+    </ul></div>
+  </div>
+</section>
+
+<!-- 9: DATA FLOW -->
+<section class="slide" data-fn="main() — data flow">
+  <div class="slide-head"><span class="eyebrow">Concept 08</span><h2>How data flows between functions</h2></div>
+  <div class="slide-body single">
+    <div class="explain-panel">
+      <ul>
+        <li><code>selectUniversity()</code> → returns <b>uniChoice</b>, which feeds into <code>inputStudentID()</code> AND <code>getCourseList()</code> AND later <code>displaySummary()</code>.</li>
+        <li><code>getCourseList(uniChoice)</code> → returns <b>allCourses</b>, which feeds into <code>selectCourses()</code>.</li>
+        <li><code>selectCourses(allCourses)</code> → returns <b>selected</b>, which feeds into <code>assignGrades()</code>.</li>
+        <li><code>assignGrades(selected)</code> → returns <b>graded</b>, which feeds into BOTH <code>calculateCGPA()</code> and <code>displaySummary()</code>.</li>
+        <li>Nothing is a global variable. Every piece of information travels strictly through parameters going in and return values coming out.</li>
+        <li>This is why <code>main()</code> barely contains any logic of its own — it just names the sequence of steps, one line per function, each line's result becoming the next line's ingredient.</li>
+      </ul>
+      <div class="callout good">This is the payoff of designing function signatures carefully up front: main() reads almost like a sentence describing the program, not a tangle of logic.</div>
+    </div>
+  </div>
+</section>
+
+<!-- 10: SCORE VS LETTER -->
+<section class="slide" data-fn="assignGrades() — design">
+  <div class="slide-head"><span class="eyebrow">Concept 09</span><h2>Why a raw score, not a letter-grade menu</h2></div>
+  <div class="slide-body">
+    <div class="code-panel"><div class="code-panel-bar"><span class="d d1"></span><span class="d d2"></span><span class="d d3"></span><span class="fname">main.cpp</span></div>
+    <div class="code-scroll"><pre class="code"><span class="cm">// earlier version — rejected:</span>
+<span class="cm">// "Select your grade: 1.A 2.A- 3.B+ ..."</span>
+<span class="cm">// → lets a student just declare "A" with no basis</span>
+
+<span class="cm">// final version:</span>
+cout &lt;&lt; <span class="st">"Enter your score (0-100): "</span>;
+cin &gt;&gt; score;
+<span class="annot"><span class="tok">scoreToGrade(score, letterGrade, gradePoint);</span><span class="note">The letter grade and grade point are now DERIVED from the score, exactly like a real transcript — the student never gets to pick their own grade directly.</span></span></pre></div></div>
+    <div class="explain-panel"><ul>
+      <li>The first version let a student pick a letter grade straight from a menu — which is backwards from how grading actually works. In real life, a score comes first, and the grade is <i>calculated</i> from it.</li>
+      <li>Switching to raw score entry makes the mechanism faithful to the university's real grading rubric shown in the assessment scale.</li>
+      <li><b>Honest limitation:</b> this doesn't stop someone from typing a false score (e.g. 95 instead of a real 60) — no console program can verify a real academic result. What it does fix is the <i>mechanism</i>: the grade is computed, not self-declared.</li>
+    </ul></div>
+  </div>
+</section>
+
+<!-- 11: PASS BY REFERENCE -->
+<section class="slide" data-fn="scoreToGrade()">
+  <div class="slide-head"><span class="eyebrow">Concept 10</span><h2>Pass-by-reference in <code style="font-family:var(--font-mono);background:var(--panel);padding:2px 8px;border-radius:6px;">scoreToGrade</code></h2></div>
+  <div class="slide-body">
+    <div class="code-panel"><div class="code-panel-bar"><span class="d d1"></span><span class="d d2"></span><span class="d d3"></span><span class="fname">main.cpp</span></div>
+    <div class="code-scroll"><pre class="code"><span class="kw">void</span> scoreToGrade(<span class="kw">double</span> score, <span class="annot"><span class="tok">string &amp;letterGrade</span><span class="note">The & means this parameter is a REFERENCE — it isn't a copy. Changes made to letterGrade inside this function directly change the original variable the caller passed in.</span></span>, <span class="annot"><span class="tok">double &amp;gradePoint</span><span class="note">Same idea — a second reference parameter, letting this one function fill in TWO outputs at once, without needing two separate return values.</span></span>)
+{
+    if (score &gt;= 80 &amp;&amp; score &lt;= 100)
+    {
+        letterGrade = <span class="st">"A"</span>;
+        gradePoint = 4.00;
+    }
+    <span class="cm">// ...</span>
+}
+
+<span class="cm">// called like this:</span>
+string letterGrade;
+double gradePoint;
+scoreToGrade(score, letterGrade, gradePoint);
+<span class="cm">// letterGrade and gradePoint are now filled in — no return needed</span></pre></div></div>
+    <div class="explain-panel"><ul>
+      <li>Normally, a C++ function only gets <b>copies</b> of the values you pass it (pass-by-value) — changing a copy inside the function has zero effect on the caller's original variable.</li>
+      <li>The <code>&amp;</code> in <code>string &amp;letterGrade</code> changes that: it's a <b>reference</b>, meaning the function is working with the caller's actual variable, not a copy.</li>
+      <li>This is exactly why <code>scoreToGrade</code> can be <code>void</code> — instead of returning one value, it reaches back and updates two variables directly through its reference parameters.</li>
+      <li>Without references here, you'd need some other mechanism to return two values at once (like bundling them in a struct) — references are the simplest tool for this in beginner C++.</li>
+    </ul></div>
+  </div>
+</section>
+
+<!-- 12: SCORE SLIDER -->
+<section class="slide" data-fn="scoreToGrade() — live">
+  <div class="slide-head"><span class="eyebrow">Live demo</span><h2>Drag the score, watch the grade change</h2>
+  <p class="sub">Mirrors the exact if/else-if bands inside <code>scoreToGrade()</code>.</p></div>
+  <div class="slide-body single">
+    <div class="widget">
+      <div class="slider-row">
+        <input type="range" id="scoreSlider" min="0" max="100" value="72">
+        <div class="score-readout" id="scoreReadout">72</div>
+      </div>
+      <div class="grade-bands" id="gradeBands"></div>
+    </div>
+  </div>
+</section>
+
+<!-- 13: IF-ELSE VS SWITCH -->
+<section class="slide" data-fn="scoreToGrade() vs old switch">
+  <div class="slide-head"><span class="eyebrow">Concept 11</span><h2>Why if/else-if here, but switch elsewhere</h2></div>
+  <div class="slide-body">
+    <div class="code-panel"><div class="code-panel-bar"><span class="d d1"></span><span class="d d2"></span><span class="d d3"></span><span class="fname">main.cpp</span></div>
+    <div class="code-scroll"><pre class="code"><span class="cm">// continuous RANGE of scores → if/else-if chain</span>
+<span class="kw">if</span> (score &gt;= 80 &amp;&amp; score &lt;= 100) { letterGrade = <span class="st">"A"</span>; }
+<span class="kw">else if</span> (score &gt;= 75) { letterGrade = <span class="st">"A-"</span>; }
+<span class="kw">else if</span> (score &gt;= 70) { letterGrade = <span class="st">"B+"</span>; }
+<span class="cm">// ...</span>
+
+<span class="cm">// discrete MENU number (an earlier design) → switch fit better</span>
+<span class="annot"><span class="tok kw">switch</span><span class="note">switch compares one value against an exact list of fixed options — perfect for a 1-to-10 menu choice, but it can't express "any number from 75 to 79" in a single case.</span></span> (gradeChoice)
+{
+    case 1: return 4.00;
+    case 2: return 3.75;
+}</pre></div></div>
+    <div class="explain-panel"><ul>
+      <li><code>switch</code> matches a value against an exact list of discrete options — great for something like a 1–10 menu choice.</li>
+      <li>A raw score (0–100) needs <i>ranges</i>, not exact matches — "any number from 75 to 79 is an A-" can't be written as a single <code>switch case</code>.</li>
+      <li><code>if / else if</code> chains handle ranges naturally because each condition is a full boolean expression (<code>score &gt;= 75</code>), not just a fixed value to match.</li>
+      <li><b>Order matters</b> in the chain: checking from highest to lowest means each <code>else if</code> only needs a lower-bound check — by the time you reach it, you already know the score failed every higher bracket above it.</li>
+    </ul></div>
+  </div>
+</section>
+
+<!-- 14: SENTINEL VALUE -->
+<section class="slide" data-fn="gradeToPoint() — sentinel">
+  <div class="slide-head"><span class="eyebrow">Concept 12</span><h2>Signaling errors with a sentinel value</h2></div>
+  <div class="slide-body">
+    <div class="code-panel"><div class="code-panel-bar"><span class="d d1"></span><span class="d d2"></span><span class="d d3"></span><span class="fname">main.cpp (earlier version)</span></div>
+    <div class="code-scroll"><pre class="code">double gradeToPoint(int gradeChoice)
+{
+    switch (gradeChoice)
+    {
+        case 1: return 4.00;
+        <span class="cm">// ... cases 2-10 ...</span>
+        <span class="kw">default</span>: <span class="annot"><span class="tok">return -1.0;</span><span class="note">-1.0 is impossible as a real grade point (they only range 0.00 to 4.00) — so this value can only mean "something went wrong," making it safe to check for.</span></span>
+    }
+}
+
+<span class="cm">// caller checks for it:</span>
+double point = -1.0;
+while (<span class="annot"><span class="tok">point &lt; 0</span><span class="note">This condition is ONLY true if gradeToPoint returned the sentinel — any real grade point is 0.00 or higher, so this cleanly detects "invalid input" without any special exception-handling machinery.</span></span>)
+{
+    <span class="cm">// re-prompt...</span>
+}</pre></div></div>
+    <div class="explain-panel"><ul>
+      <li>A <b>sentinel value</b> is a special return value chosen specifically because it can <i>never</i> occur as a legitimate answer — here, <code>-1.0</code>, since real grade points only run from 0.00 to 4.00.</li>
+      <li>This gives the calling code a simple way to detect "that input was invalid" just by checking <code>if (point &lt; 0)</code> — no crash, no exceptions, no extra machinery.</li>
+      <li>It's a common beginner-friendly pattern before a course introduces proper exception handling (<code>try</code>/<code>catch</code>) — simple, readable, and effective for small programs like this.</li>
+      <li><b>Risk to know about:</b> sentinel values only work if you're certain about the valid range. If grade points could ever legitimately go negative, this trick would silently break.</li>
+    </ul></div>
+  </div>
+</section>
+
+<!-- 15: DUPLICATE PREVENTION -->
+<section class="slide" data-fn="selectCourses() — duplicates">
+  <div class="slide-head"><span class="eyebrow">Concept 13</span><h2>Stopping duplicate course selection</h2></div>
+  <div class="slide-body">
+    <div class="code-panel"><div class="code-panel-bar"><span class="d d1"></span><span class="d d2"></span><span class="d d3"></span><span class="fname">main.cpp</span></div>
+    <div class="code-scroll"><pre class="code"><span class="annot"><span class="tok ty">vector&lt;int&gt;</span><span class="note">A running list of every course number the student has already picked, growing by one each time a valid, non-duplicate choice is accepted.</span></span> chosenIndices;
+
+<span class="cm">// ...inside the input loop, after range-checking courseChoice:</span>
+<span class="kw">bool</span> alreadyChosen = <span class="kw">false</span>;
+<span class="annot"><span class="tok kw">for</span><span class="note">A manual search: walk through every index already chosen so far and compare it to the new choice. If any match is found, it's a duplicate.</span></span> (int j = 0; j &lt; chosenIndices.size(); j++)
+{
+    if (chosenIndices[j] == courseChoice)
+    {
+        alreadyChosen = true;
+        break;
+    }
+}
+if (alreadyChosen)
+    cout &lt;&lt; <span class="st">"You've already selected that course...\n"</span>;
+else
+    valid = true;</pre></div></div>
+    <div class="explain-panel"><ul>
+      <li>Without this check, nothing stops a student from "selecting" the same course twice — inflating their credit hours and skewing the GPA calculation.</li>
+      <li><code>chosenIndices</code> remembers every course number already accepted, using the same 1-based numbers shown on screen (no off-by-one translation needed for the comparison).</li>
+      <li>The nested loop is a manual "does this list already contain X?" search — C++ offers more advanced tools for this (like <code>std::find</code> from <code>&lt;algorithm&gt;</code>), but a plain loop is more transparent while you're still building comfort with vectors.</li>
+    </ul></div>
+  </div>
+</section>
+
+<!-- 16: GPA FORMULA -->
+<section class="slide" data-fn="calculateCGPA()">
+  <div class="slide-head"><span class="eyebrow">Concept 14</span><h2>The GPA formula, worked through</h2></div>
+  <div class="slide-body">
+    <div class="code-panel"><div class="code-panel-bar"><span class="d d1"></span><span class="d d2"></span><span class="d d3"></span><span class="fname">main.cpp</span></div>
+    <div class="code-scroll"><pre class="code">double calculateCGPA(vector&lt;Course&gt; selectedCourses)
+{
+    double totalQualityPoints = 0.0;
+    int totalCreditHours = 0;
+
+    for (int i = 0; i &lt; selectedCourses.size(); i++)
+    {
+        <span class="annot"><span class="tok">totalQualityPoints += selectedCourses[i].creditHours * selectedCourses[i].gradePoint;</span><span class="note">Example: MATH103, 3 credit hours, grade B (3.25 points) → adds 3 × 3.25 = 9.75 to the running total.</span></span>
+        totalCreditHours += selectedCourses[i].creditHours;
+    }
+
+    <span class="annot"><span class="tok kw">if</span><span class="note">Guards against dividing by zero — which would happen if, somehow, no courses were ever selected. Division by zero on doubles doesn't crash in C++, it produces "inf" or "nan", which would print as garbage in the final report.</span></span> (totalCreditHours == 0)
+        return 0.0;
+
+    return totalQualityPoints / totalCreditHours;
+}</pre></div></div>
+    <div class="explain-panel">
+      <ul>
+        <li>The formula: <b>GPA = Σ(Credit Hours × Grade Point) ÷ Σ(Credit Hours)</b> — exactly matching the official calculation method.</li>
+        <li>Two accumulators build up across the loop: <code>totalQualityPoints</code> (the numerator) and <code>totalCreditHours</code> (the denominator).</li>
+      </ul>
+      <div class="callout good">
+        Worked example — 3 courses:<br>
+        MATH103 (3 CH, B = 3.25) → 9.75<br>
+        CSSD111 (3 CH, A = 4.00) → 12.00<br>
+        ENGL171 (2 CH, A- = 3.75) → 7.50<br>
+        <b>GPA = (9.75+12.00+7.50) ÷ (3+3+2) = 29.25 ÷ 8 = 3.66</b>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- 16b: CLASSIFICATION -->
+<section class="slide" data-fn="classifyDegree()">
+  <div class="slide-head"><span class="eyebrow">Concept 15</span><h2>Turning a CGPA into a class of degree</h2></div>
+  <div class="slide-body">
+    <div class="code-panel"><div class="code-panel-bar"><span class="d d1"></span><span class="d d2"></span><span class="d d3"></span><span class="fname">main.cpp</span></div>
+    <div class="code-scroll"><pre class="code">string classifyDegree(<span class="kw">double</span> cgpa)
+{
+    <span class="annot"><span class="tok kw">if</span><span class="note">Checked from the highest boundary down — by the time we reach a lower else-if, the CGPA has already failed every higher check above it, so only the lower bound needs testing.</span></span> (cgpa &gt;= 3.60)
+        return <span class="st">"First Class Honours"</span>;
+    else if (cgpa &gt;= 3.00)
+        return <span class="st">"Second Class Honours (Upper Division)"</span>;
+    else if (cgpa &gt;= 2.50)
+        return <span class="st">"Second Class Honours (Lower Division)"</span>;
+    else if (cgpa &gt;= 2.00)
+        return <span class="st">"Third Class Honours"</span>;
+    else if (cgpa &gt;= 1.50)
+        return <span class="st">"Pass"</span>;
+    else
+        return <span class="st">"Fail (No Award)"</span>;
+}
+
+<span class="cm">// called from inside displaySummary — needs nothing but cgpa:</span>
+<span class="annot"><span class="tok">cout &lt;&lt; "Class of Degree: " &lt;&lt; classifyDegree(cgpa);</span><span class="note">No new parameter needed anywhere else in the program — displaySummary already receives cgpa, so it can call this directly without touching main() or any other function's signature.</span></span></pre></div></div>
+    <div class="explain-panel"><ul>
+      <li>A raw number like <b>3.42</b> doesn't mean much on its own — students and employers think in terms of <b>class of degree</b>, so this translates the GPA formula's output into that familiar language.</li>
+      <li>Same if/else-if shape as <code>scoreToGrade</code>, just with different boundaries and coarser categories (six bands instead of ten).</li>
+      <li>Bands used here follow the common Ghanaian GPA-based university scheme (UG, UCC-style): First Class 3.60–4.00, Second Upper 3.00–3.59, Second Lower 2.50–2.99, Third Class 2.00–2.49, Pass 1.50–1.99, Fail below 1.50.</li>
+      <li class="callout" style="display:block;margin-top:4px;">Worth double-checking against your own course handbook — some institutions use slightly different cutoffs (e.g. a 2.00 floor for Second Lower instead of 2.50), so exact boundaries can vary by school and by year.</li>
+    </ul></div>
+  </div>
+</section>
+
+<!-- 16c: CLASSIFICATION LIVE -->
+<section class="slide" data-fn="classifyDegree() — live">
+  <div class="slide-head"><span class="eyebrow">Live demo</span><h2>Drag the CGPA, watch the class change</h2>
+  <p class="sub">Mirrors the exact boundaries inside <code>classifyDegree()</code>.</p></div>
+  <div class="slide-body single">
+    <div class="widget">
+      <div class="slider-row">
+        <input type="range" id="cgpaSlider" min="0" max="400" value="342">
+        <div class="score-readout" id="cgpaReadout">3.42</div>
+      </div>
+      <div class="grade-bands" id="classBands"></div>
+    </div>
+  </div>
+</section>
+
+<!-- 17: TERNARY -->
+<section class="slide" data-fn="displaySummary()">
+  <div class="slide-head"><span class="eyebrow">Concept 15</span><h2>The ternary operator</h2></div>
+  <div class="slide-body">
+    <div class="code-panel"><div class="code-panel-bar"><span class="d d1"></span><span class="d d2"></span><span class="d d3"></span><span class="fname">main.cpp</span></div>
+    <div class="code-scroll"><pre class="code">void displaySummary(...)
+{
+    <span class="annot"><span class="tok">string universityName = (uniChoice == 1) ? "University of Ghana (Legon)" : "GCTU";</span><span class="note">Read as: "if uniChoice equals 1, use the first string; otherwise use the second." One line instead of a four-line if/else block.</span></span>
+}</pre></div></div>
+    <div class="explain-panel"><ul>
+      <li>The ternary operator <code>condition ? valueIfTrue : valueIfFalse</code> is shorthand for a simple if/else that just picks between two values.</li>
+      <li>It reads left to right: check the condition, then pick one of the two results — assigned directly into <code>universityName</code> in a single statement.</li>
+      <li><b>Limitation:</b> it only works cleanly for exactly two outcomes. If a third university were added, this line would need to become a real <code>if / else if / else</code> chain instead — ternaries don't scale well past two branches.</li>
+    </ul></div>
+  </div>
+</section>
+
+<!-- 18: FORMATTING -->
+<section class="slide" data-fn="displaySummary() — formatting">
+  <div class="slide-head"><span class="eyebrow">Concept 16</span><h2><code style="font-family:var(--font-mono);background:var(--panel);padding:2px 8px;border-radius:6px;">fixed</code> and <code style="font-family:var(--font-mono);background:var(--panel);padding:2px 8px;border-radius:6px;">setprecision(2)</code></h2></div>
+  <div class="slide-body">
+    <div class="code-panel"><div class="code-panel-bar"><span class="d d1"></span><span class="d d2"></span><span class="d d3"></span><span class="fname">main.cpp</span></div>
+    <div class="code-scroll"><pre class="code">cout &lt;&lt; <span class="st">"Final CGPA: "</span> &lt;&lt; <span class="annot"><span class="tok">fixed &lt;&lt; setprecision(2)</span><span class="note">fixed forces decimal notation instead of switching to scientific notation for certain values. setprecision(2) then locks the output to exactly 2 decimal places.</span></span> &lt;&lt; cgpa &lt;&lt; <span class="st">"\n"</span>;
+
+<span class="cm">// without these manipulators, cgpa might print as:</span>
+<span class="cm">// 3.41999999999999    or    3.4    or    3.42e+00</span>
+<span class="cm">// with them, it always prints as:</span>
+<span class="cm">// 3.42</span></pre></div></div>
+    <div class="explain-panel"><ul>
+      <li>Raw <code>double</code> values don't print consistently — floating-point rounding can produce ugly trailing digits, and very large or small numbers can switch to scientific notation automatically.</li>
+      <li><code>fixed</code> (from <code>&lt;iomanip&gt;</code>) locks output to plain decimal notation.</li>
+      <li><code>setprecision(2)</code> then caps it to exactly 2 digits after the decimal point.</li>
+      <li><b>Sticky behavior:</b> once applied to <code>cout</code>, both settings persist for every subsequent output in the program — which is exactly what's wanted here, since every grade point and the final CGPA should look consistent.</li>
+    </ul></div>
+  </div>
+</section>
+
+<!-- 19: SIGNED/UNSIGNED -->
+<section class="slide" data-fn="selectCourses() — warning">
+  <div class="slide-head"><span class="eyebrow">Concept 17</span><h2>The signed vs. unsigned comparison warning</h2></div>
+  <div class="slide-body">
+    <div class="code-panel"><div class="code-panel-bar"><span class="d d1"></span><span class="d d2"></span><span class="d d3"></span><span class="fname">main.cpp</span></div>
+    <div class="code-scroll"><pre class="code">if (courseChoice &lt; 1 || <span class="annot"><span class="tok">courseChoice &gt; allCourses.size()</span><span class="note">courseChoice is an int (signed). allCourses.size() returns size_t (unsigned). Comparing signed against unsigned can trigger a compiler warning, even though the actual values here are always non-negative in practice.</span></span>)
+
+<span class="cm">// a stricter compiler might flag this with -Wsign-compare</span>
+<span class="cm">// silencing it, if desired:</span>
+courseChoice &gt; <span class="ty">static_cast&lt;int&gt;</span>(allCourses.size())</pre></div></div>
+    <div class="explain-panel"><ul>
+      <li><code>.size()</code> on a vector returns <code>size_t</code>, an <b>unsigned</b> type — it can never represent a negative number.</li>
+      <li><code>courseChoice</code> is a plain <code>int</code> — a <b>signed</b> type, which can represent negatives.</li>
+      <li>Comparing a signed value against an unsigned one can trigger a compiler warning (<code>-Wsign-compare</code>) on stricter settings, because the compiler can't always guarantee the comparison behaves as expected across all possible values.</li>
+      <li>In this program it works correctly in practice, since course counts are never negative — but the clean fix, if a lecturer asks, is wrapping the unsigned side in <code>static_cast&lt;int&gt;()</code>.</li>
+    </ul></div>
+  </div>
+</section>
+
+<!-- 20: VALIDATION NOT AUTH -->
+<section class="slide" data-fn="validateStudentID() — honest scope">
+  <div class="slide-head"><span class="eyebrow">Concept 18</span><h2>Format validation, not real authentication</h2></div>
+  <div class="slide-body single">
+    <div class="explain-panel">
+      <ul>
+        <li>The ID check only confirms a string <i>looks like</i> a real ID of the invented format for that university — length, prefix, and digit pattern.</li>
+        <li>It does <b>not</b> verify the person is actually enrolled anywhere, and it can't check against a real student database (this program has none).</li>
+        <li>Any string matching the pattern — real or made up — will pass. That's an intentional, honest scope limit for a console-based academic exercise, not an oversight.</li>
+      </ul>
+      <div class="callout">If asked directly: "This validates <i>format</i>, not <i>identity</i>. A real authentication system would need a database lookup and typically a password or PIN, which is out of scope for this program."</div>
+    </div>
+  </div>
+</section>
+
+<!-- 21: SCOPE / EXTENSIONS -->
+<section class="slide" data-fn="scope & extensions">
+  <div class="slide-head"><span class="eyebrow">Concept 19</span><h2>What was left out, and what could be added</h2></div>
+  <div class="slide-body single">
+    <div class="explain-panel">
+      <ul>
+        <li><b>Left out deliberately:</b> non-numeric grade categories (X = Absent, Z = Disqualified, IC = Incomplete, AD = Audit) — these don't fit "enter a score you achieved," since they represent situations where no numeric assessment happened.</li>
+        <li><b>Left out deliberately:</b> real persistence — nothing is saved to a file or database; every run starts fresh.</li>
+        <li><b>Left out deliberately:</b> real authentication — the ID check is format-only, as covered on the previous slide.</li>
+        <li><b>Possible extensions:</b> save each run's summary to a text or CSV file; support more universities by generalizing the course-list and ID-format logic; track a running CGPA across multiple semesters instead of one semester's GPA at a time.</li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<!-- 22: MAIN WALKTHROUGH -->
+<section class="slide" data-fn="main()">
+  <div class="slide-head"><span class="eyebrow">Full walkthrough</span><h2><code style="font-family:var(--font-mono);background:var(--panel);padding:2px 8px;border-radius:6px;">main()</code>, line by line</h2>
+  <p class="sub">Click any line to see exactly what it produces and where that result goes next.</p></div>
+  <div class="slide-body single">
+    <div class="code-panel"><div class="code-panel-bar"><span class="d d1"></span><span class="d d2"></span><span class="d d3"></span><span class="fname">main.cpp</span></div>
+    <div class="code-scroll"><pre class="code">int main()
+{
+    <span class="annot"><span class="tok">int uniChoice = selectUniversity();</span><span class="note">Produces uniChoice (1 or 2). Flows into: inputStudentID(), getCourseList(), and displaySummary() at the very end.</span></span>
+    <span class="annot"><span class="tok">string name = inputName();</span><span class="note">Produces name. Flows into: displaySummary() only — it's never used for any logic, purely for the final printout.</span></span>
+    <span class="annot"><span class="tok">string studentID = inputStudentID(uniChoice);</span><span class="note">Takes uniChoice in, produces studentID (already validated inside the function). Flows into: displaySummary().</span></span>
+
+    <span class="annot"><span class="tok">vector&lt;Course&gt; allCourses = getCourseList(uniChoice);</span><span class="note">Takes uniChoice in, produces the full course catalog for that university. Flows into: selectCourses().</span></span>
+    <span class="annot"><span class="tok">vector&lt;Course&gt; selected = selectCourses(allCourses);</span><span class="note">Takes allCourses in, produces just the courses the student picked. Flows into: assignGrades().</span></span>
+    <span class="annot"><span class="tok">vector&lt;Course&gt; graded = assignGrades(selected);</span><span class="note">Takes selected in, produces the same courses now filled in with letterGrade and gradePoint. Flows into: BOTH calculateCGPA() and displaySummary().</span></span>
+
+    <span class="annot"><span class="tok">double cgpa = calculateCGPA(graded);</span><span class="note">Takes graded in, produces the single final GPA number. Flows into: displaySummary().</span></span>
+
+    <span class="annot"><span class="tok">displaySummary(name, studentID, uniChoice, graded, cgpa);</span><span class="note">The final step — takes every piece of data gathered so far and prints the complete report. Nothing flows out of this; it's the end of the pipeline.</span></span>
+
+    return 0;
+}</pre></div></div>
+  </div>
+</section>
+
+<!-- 23: QUIZ -->
+<section class="slide" data-fn="quiz">
+  <div class="slide-head"><span class="eyebrow">Rehearsal</span><h2>Quiz yourself</h2>
+  <p class="sub">Click a card to flip it and check your answer.</p></div>
+  <div class="slide-body single">
+    <div class="quiz-grid" id="quizGrid"></div>
+  </div>
+</section>
+
+<!-- 24: CLOSING -->
+<section class="slide" data-fn="end">
+  <div class="closing">
+    <span class="kicker">CGPA Calculator</span>
+    <h2>Questions?</h2>
+    <p>10 functions. One shared struct. One formula. Built and defended, top to bottom.</p>
+  </div>
+</section>
+
+</div>
+
+<div class="navbar">
+  <button class="navbtn" id="prevBtn">← Prev</button>
+  <span class="navhint">Use ← → arrow keys, or click a highlighted term for details</span>
+  <button class="navbtn" id="nextBtn">Next →</button>
+</div>
+
+<script>
+(function(){
+  const slides = Array.from(document.querySelectorAll('.slide'));
+  const total = slides.length;
+  let idx = 0;
+
+  const counter = document.getElementById('counter');
+  const progressFill = document.getElementById('progressFill');
+  const breadcrumb = document.getElementById('breadcrumb');
+  const prevBtn = document.getElementById('prevBtn');
+  const nextBtn = document.getElementById('nextBtn');
+
+  function pad(n){ return n < 10 ? '0'+n : ''+n; }
+
+  function render(){
+    slides.forEach((s,i)=> s.classList.toggle('active', i===idx));
+    counter.textContent = pad(idx+1) + ' / ' + pad(total);
+    progressFill.style.width = (idx/(total-1)*100) + '%';
+    const fn = slides[idx].getAttribute('data-fn') || '';
+    breadcrumb.innerHTML = 'main.cpp <b>&gt; ' + fn + '</b>';
+    prevBtn.disabled = idx === 0;
+    nextBtn.disabled = idx === total-1;
+    nextBtn.textContent = idx === total-1 ? 'End' : 'Next →';
+  }
+
+  function go(delta){
+    idx = Math.min(total-1, Math.max(0, idx+delta));
+    render();
+  }
+
+  prevBtn.addEventListener('click', ()=>go(-1));
+  nextBtn.addEventListener('click', ()=>go(1));
+  document.addEventListener('keydown', (e)=>{
+    if(e.key === 'ArrowRight') go(1);
+    if(e.key === 'ArrowLeft') go(-1);
+  });
+
+  // click-to-annotate delegation
+  document.getElementById('stage').addEventListener('click', (e)=>{
+    const tok = e.target.closest('.tok');
+    if(!tok) return;
+    const annot = tok.closest('.annot');
+    if(!annot) return;
+    annot.classList.toggle('open');
+  });
+
+  render();
+
+  // ---------- ID SIMULATOR ----------
+  const idInput = document.getElementById('idInput');
+  const idResult = document.getElementById('idResult');
+  const uniRadios = document.querySelectorAll('input[name="uni"]');
+
+  function validateUG(id){
+    if(id.length !== 10) return {ok:false, reason:'Must be exactly 10 characters (currently '+id.length+').'};
+    if(id.substr(0,6) !== 'UG2026') return {ok:false, reason:'Must start with "UG2026".'};
+    for(let i=6;i<10;i++){
+      if(!/[0-9]/.test(id[i])) return {ok:false, reason:'Characters 7–10 must all be digits.'};
+    }
+    return {ok:true};
+  }
+  function validateGCTU(id){
+    if(id.length !== 10) return {ok:false, reason:'Must be exactly 10 characters (currently '+id.length+').'};
+    if(id.substr(0,6) !== '252640') return {ok:false, reason:'Must start with "252640".'};
+    for(let i=0;i<10;i++){
+      if(!/[0-9]/.test(id[i])) return {ok:false, reason:'All 10 characters must be digits.'};
+    }
+    return {ok:true};
+  }
+
+  function runIdCheck(){
+    const uni = document.querySelector('input[name="uni"]:checked').value;
+    const id = idInput.value.trim();
+    if(id.length === 0){
+      idResult.className = 'result-box neutral';
+      idResult.textContent = 'Start typing to see it validated live, the same way the C++ function would.';
+      return;
+    }
+    const res = uni === '1' ? validateUG(id) : validateGCTU(id);
+    if(res.ok){
+      idResult.className = 'result-box pass';
+      idResult.textContent = '✓ VALID — validateStudentID(' + uni + ', "' + id + '") would return true.';
+    } else {
+      idResult.className = 'result-box fail';
+      idResult.textContent = '✗ REJECTED — ' + res.reason;
+    }
+  }
+  idInput.addEventListener('input', runIdCheck);
+  uniRadios.forEach(r=> r.addEventListener('change', runIdCheck));
+
+  // ---------- SCORE SLIDER ----------
+  const scoreSlider = document.getElementById('scoreSlider');
+  const scoreReadout = document.getElementById('scoreReadout');
+  const gradeBandsEl = document.getElementById('gradeBands');
+  const bands = [
+    {min:80,max:100,letter:'A',point:'4.00'},
+    {min:75,max:79,letter:'A-',point:'3.75'},
+    {min:70,max:74,letter:'B+',point:'3.50'},
+    {min:65,max:69,letter:'B',point:'3.25'},
+    {min:60,max:64,letter:'B-',point:'3.00'},
+    {min:55,max:59,letter:'C+',point:'2.75'},
+    {min:50,max:54,letter:'C',point:'2.50'},
+    {min:45,max:49,letter:'C-',point:'2.00'},
+    {min:40,max:44,letter:'D',point:'1.50'},
+    {min:0,max:39,letter:'F',point:'0.00'}
+  ];
+  bands.forEach((b,i)=>{
+    const div = document.createElement('div');
+    div.className = 'band';
+    div.dataset.i = i;
+    div.innerHTML = b.letter + '<small>' + b.min + '-' + b.max + '</small>';
+    gradeBandsEl.appendChild(div);
+  });
+  function updateScore(){
+    const score = parseInt(scoreSlider.value,10);
+    scoreReadout.textContent = score;
+    const activeIdx = bands.findIndex(b=> score>=b.min && score<=b.max);
+    Array.from(gradeBandsEl.children).forEach((el,i)=> el.classList.toggle('active', i===activeIdx));
+  }
+  scoreSlider.addEventListener('input', updateScore);
+  updateScore();
+
+  // ---------- CGPA CLASSIFICATION SLIDER ----------
+  const cgpaSlider = document.getElementById('cgpaSlider');
+  const cgpaReadout = document.getElementById('cgpaReadout');
+  const classBandsEl = document.getElementById('classBands');
+  const classBands = [
+    {min:0.00,max:1.49,label:'Fail'},
+    {min:1.50,max:1.99,label:'Pass'},
+    {min:2.00,max:2.49,label:'Third'},
+    {min:2.50,max:2.99,label:'2nd Lower'},
+    {min:3.00,max:3.59,label:'2nd Upper'},
+    {min:3.60,max:4.00,label:'First'}
+  ];
+  classBands.forEach((b,i)=>{
+    const div = document.createElement('div');
+    div.className = 'band';
+    div.dataset.i = i;
+    div.innerHTML = b.label + '<small>' + b.min.toFixed(2) + '-' + b.max.toFixed(2) + '</small>';
+    classBandsEl.appendChild(div);
+  });
+  function updateCgpa(){
+    const cgpa = parseInt(cgpaSlider.value,10) / 100;
+    cgpaReadout.textContent = cgpa.toFixed(2);
+    const activeIdx = classBands.findIndex(b=> cgpa>=b.min && cgpa<=b.max);
+    Array.from(classBandsEl.children).forEach((el,i)=> el.classList.toggle('active', i===activeIdx));
+  }
+  cgpaSlider.addEventListener('input', updateCgpa);
+  updateCgpa();
+
+  // ---------- QUIZ ----------
+  const quizData = [
+    {q:'Why is validateStudentID passed uniChoice as a parameter?', a:'Because UG and GCTU have different ID formats — the function needs to know which set of rules to apply.'},
+    {q:'Why does inputStudentID loop instead of asking once?', a:'It keeps re-prompting until validateStudentID returns true, guaranteeing the program never proceeds with a badly formatted ID.'},
+    {q:'Why did scoreToGrade switch to reference parameters (&)?', a:'So one void function could fill in both letterGrade and gradePoint at once, directly modifying the caller\'s variables instead of returning just one value.'},
+    {q:'Why is the ID check not real authentication?', a:'It only checks that a string matches the expected format — it never checks against a real student database, so any correctly-shaped string passes.'},
+    {q:'Why -1.0 as an error signal in the old gradeToPoint?', a:'Because real grade points only range 0.00–4.00, so -1.0 can never be a legitimate answer — making it safe to detect as "invalid".'},
+    {q:'Why vector<Course> instead of a fixed array for course lists?', a:'The number of courses a student selects is only known at runtime, and vectors can grow dynamically via push_back, unlike fixed-size arrays.'},
+    {q:'Why check id.length() before calling substr() or indexing?', a:'To avoid out-of-bounds access — if the string is shorter than expected, indexing into it is undefined behavior in C++.'},
+    {q:'Why does calculateCGPA check totalCreditHours == 0?', a:'To avoid dividing by zero, which would produce inf or nan and corrupt the final printed report.'},
+    {q:'Why is scoring done via if/else-if instead of switch?', a:'switch matches exact discrete values; a continuous numeric range like "75 to 79" needs boolean range checks, which only if/else-if can express.'},
+    {q:'Why does main() have almost no logic of its own?', a:'Because each function\'s return value was designed to feed directly into the next function\'s parameters — main() just sequences the calls.'},
+    {q:'Why does classifyDegree need no new parameter in displaySummary?', a:'Because it only depends on cgpa, which displaySummary already receives — so it can be called directly without touching main() or any other signature.'}
+  ];
+  const quizGrid = document.getElementById('quizGrid');
+  quizData.forEach(item=>{
+    const card = document.createElement('div');
+    card.className = 'flip-card';
+    card.innerHTML = '<div class="flip-inner"><div class="flip-front">'+item.q+'</div><div class="flip-back">'+item.a+'</div></div>';
+    card.addEventListener('click', ()=> card.classList.toggle('flipped'));
+    quizGrid.appendChild(card);
+  });
+
+})();
+</script>
+</body>
+</html>
